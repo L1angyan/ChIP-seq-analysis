@@ -1,0 +1,43 @@
+#bowtie2进行序列比对
+module load Bowtie2/2.3.4.3
+module load SAMtools/1.9
+
+for i in *fastq.gz;do
+name=${i%.fastq.gz}
+bsub -J align -n 5 -R span[hosts=1] -o %J.out -e %J.err -q q2680v2 \
+"bowtie2 -p 5 -3 5 --local -x ~/ly/protocol/chipseq/genome/index/mm10 -U $i | \
+samtools sort -O bam -o ${name}.bam"
+#-3,-5质量剪切,--loacl局部比对
+#根据QC报告，3’末端5bp片段测序质量较低，切掉
+done
+#序列编号改为样本名
+mv SRR620204.bam ring1b.bam
+mv SRR620205.bam cbx7.bam
+mv SRR620206.bam suz12.bam
+mv SRR620207.bam RYBP.bam
+mv SRR620208.bam IgG_old.bam
+mv SRR620209.bam IgG.bam
+
+
+#用MACS2 call peak
+module load MACS2/2.2.7.1
+
+cd /public/home/yliang/ly/protocol/chipseq/mapping_result
+bsub -J peak -n 1 -R span[hosts=1] -o %J.out -e %J.err -q q2680v2 \
+"macs2 callpeak -t cbx7.bam -c ./control/IgG.bam -f BAM -g mm -n cbx7 -B -q 0.01 2> cbx7.log"
+bsub -J peak -n 1 -R span[hosts=1] -o %J.out -e %J.err -q q2680v2 \
+"macs2 callpeak -t RYBP.bam -c ./control/IgG.bam -f BAM -g mm -n RYBP -B -q 0.01 2> RYBP.log"
+bsub -J peak -n 1 -R span[hosts=1] -o %J.out -e %J.err -q q2680v2 \
+"macs2 callpeak -t suz12.bam -c ./control/IgGold.bam -f BAM -g mm -n suz12 -B -q 0.01 2> suz12.log"
+bsub -J peak -n 1 -R span[hosts=1] -o %J.out -e %J.err -q q2680v2 \
+"macs2 callpeak -t ring1B.bam -c ./control/IgGold.bam -f BAM -g mm -n ring1B -B -q 0.01 2> ring1B.log"
+#macs2 callpeak -t ChIP.bam -c Control.bam -f BAM -g hs -n test -B -q 0.01
+#-t: 实验组的输出结果
+#-c: 对照组的输出结果
+#-f: -t和-c提供文件的格式，如果不提供这项，就是自动检测选择
+#-g: 基因组大小， 默认提供了hs, mm, ce, dm选项， 不在其中的话，比如说拟南芥，就需要自己提供了
+#-n: 输出文件的前缀名
+#-B: 会保存更多的信息在bedGraph文件中
+#-q: q值，也就是最小的PDR阈值， 默认是0.05,q值是根据p值利用BH计算，也就是多重试验矫正后的结果
+#-p： 这个是p值，指定p值后MACS2就不会用q值了
+#输出的文件中，BED文件包含peak的数目和位置信息，其他文件详见MACS2软件说明
