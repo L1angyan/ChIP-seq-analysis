@@ -26,3 +26,15 @@ fastq-dump –split-3 -gzip $i
 done
 #-split3格式自动区别单端或者双端测序
 #将sra文件转化为fastq格式。
+
+#质控
+# 需要安装fastqc 和 multiqc
+# 先获取QC结果
+module load FastQC/0.11.5-Java-1.8.0_92
+for i in *fastq.gz; do
+bsub -J QC -n 4 -R span[hosts=1] -o %J.out -e %J.err -q q2680v2 \
+"fastqc -t 4 $i"
+done
+#待任务结束之后，再跑multiqc
+module load MultiQC/1.6
+multiqc *fastqc.zip --pdf
