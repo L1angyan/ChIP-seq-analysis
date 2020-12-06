@@ -1,0 +1,43 @@
+#peak结果注释和可视化，工具：R包ChIPseeker,可将peak文件复制到熟悉的操作系统上完成
+setwd("D:/liangyan123/zzz_code/ChIP-seq/narrowpeak")
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+#安装BiocManager
+BiocManager::install("ChIPseeker")
+#安装ChIPseeker包
+BiocManager::install("org.Mm.eg.db")
+BiocManager::install("TxDb.Mmusculus.UCSC.mm10.knownGene")
+
+library("ChIPseeker")
+library("org.Mm.eg.db")
+library("TxDb.Mmusculus.UCSC.mm10.knownGene")
+library("VennDiagram")
+ring1b <- readPeakFile("ring1b_peaks.narrowPeak")
+cbx7 <- readPeakFile("cbx7_peaks.narrowPeak")
+RYBP <- readPeakFile("RYBP_peaks.narrowPeak")
+suz12 <- readPeakFile("suz12_peaks.narrowPeak")
+#读取peak文件
+txdb = TxDb.Mmusculus.UCSC.mm10.knownGene
+peaks = list(ring1b, cbx7, RYBP, suz12)
+peakAnnoList = lapply(peaks, annotatePeak,
+                      tssRegion=c(-2500,2500), 
+                      TxDb=txdb,addFlankGeneInfo=TRUE, 
+                      flankDistance=5000)
+                      #tssRegion定义tss区域，addFlankGeneInfo加入peak侧翼的基因信息(上下游5K)
+as.GRanges(peakAnnoList[[1]])
+as.data.frame(peakAnnoList[[1]])  #两种方式查看peak注释信息
+
+#可视化
+plotDistToTSS(peakAnnoList,title = "Distribution of TF binding site relative to TSS")
+#转录因子结合位点与TSS距离的分布
+covplot(ring1b, weightCol="V9",chrs = c(paste0("chr", 1:19),"chrX"))
+#peak在染色体上的分布,这里展示ring1b样本的结果
+
+# 准备TSS区域，然后将peak映射到这些区域，得到tagMatrix
+fourgenes <- intersect(genes[[1]],intersect(genes[[2]],intersect(genes[[3]],genes[[4]])))
+target <- select(txdb, keys=fourgenes, columns=c("TXID","GENEID"), keytype = "GENEID")
+promoter <- promoters(txdb, upstream = 2500, downstream = 2500)
+target_promoter <- promoter[promoter$tx_id %in% target$TXID]
+tagMatrixList <- lapply(peaks, getTagMatrix, window=target_promoter)
+names(tagMatrixList) = c("ring1b", "cbx7", "RYBP", "suz12")
+plotAvgProf(tagMatrixList , xlim = c(-2500,2499))
