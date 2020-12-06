@@ -1,0 +1,28 @@
+#在ncbi下载accession list，命名为“sra.txt”
+SRR620204
+SRR620205
+SRR620206
+SRR620207
+SRR620208
+SRR620209
+
+module load sratoolkit/2.9.6
+prefetch `less sra.txt`
+#下载原始数据,调用sratools中的prefetch进行下载，数据出存在路径:~/ncbi/sra/
+
+#下载小鼠基因组注释，注释文件到https://genome.ucsc.edu/cgi-bin/hgTables选取保存。
+#参数：
+#clade：Mammal，genome：Mouse，assembly：mm10，group：Genes and Gene Predictions
+#track：NCBI Refseq，region：Genome，output format：BED，output file:mm10_refSeq.bed
+#下载得到BED格式注释，mm10_refSeq.bed
+
+#下载参考基因组索引，下载基因组自己建索引太慢了
+wget ftp://ftp.ccb.jhu.edu/pub/data/bowtie2_indexes/mm10.zip
+unzip mm10.zip
+
+module load sratoolkit/2.9.6
+for i in *.sra;do
+fastq-dump –split-3 -gzip $i
+done
+#-split3格式自动区别单端或者双端测序
+#将sra文件转化为fastq格式。
