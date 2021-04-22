@@ -41,3 +41,4 @@ target_promoter <- promoter[promoter$tx_id %in% target$TXID]
 tagMatrixList <- lapply(peaks, getTagMatrix, window=target_promoter)
 names(tagMatrixList) = c("ring1b", "cbx7", "RYBP", "suz12")
 plotAvgProf(tagMatrixList , xlim = c(-2500,2499))
+
